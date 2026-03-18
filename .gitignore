@@ -11,3 +11,8 @@ package-lock.json
 # Environment variables
 .env
 .DS_Store # macOS specific.e
+
+# IDE specific files
+.vscode/
+.idea/
+/src/storage/data
