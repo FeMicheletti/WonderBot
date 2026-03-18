@@ -1,0 +1,10 @@
+import { Client, Collection, GatewayIntentBits } from 'discord.js';
+
+export class AppClient extends Client {
+    commands: Collection<string, any>;
+
+    constructor() {
+        super({ intents: [GatewayIntentBits.Guilds] });
+        this.commands = new Collection();
+    }
+}
