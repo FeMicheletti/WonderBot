@@ -1,0 +1,26 @@
+{
+  "name": "wonder",
+  "version": "1.0.0",
+  "description": "My Wonder Bot",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "deploy": "node deploy-commands.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FeMicheletti/Wonder.git"
+  },
+  "keywords": [],
+  "author": "Felipe Micheletti",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/FeMicheletti/Wonder/issues"
+  },
+  "homepage": "https://github.com/FeMicheletti/Wonder#readme",
+  "dependencies": {
+    "discord.js": "^14.25.1",
+    "dotenv": "^17.3.1"
+  }
+}

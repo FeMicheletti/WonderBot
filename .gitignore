@@ -1,0 +1,13 @@
+# Dependencies
+node_modules/
+/npm-debug.log*
+package-lock.json
+
+# Build artifacts
+/dist/
+/build/
+/coverage/
+
+# Environment variables
+.env
+.DS_Store # macOS specific.e
