@@ -11,7 +11,7 @@ export class MallDatabase extends BaseJsonTable<MallTableData> {
     }
 
     public findById(itemId: string): MallItem | null {
-        return this.data[itemId] ?? null;
+        return Object.values(this.data).find(item => item.id === itemId) ?? null;
     }
 
     public upsert(item: MallItem): void {
