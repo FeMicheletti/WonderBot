@@ -1,5 +1,6 @@
 {
   "name": "wonder",
+  "author": "Felipe Micheletti",
   "version": "1.0.0",
   "description": "My Wonder Bot",
   "main": "index.js",
@@ -16,7 +17,6 @@
     "url": "git+https://github.com/FeMicheletti/Wonder.git"
   },
   "keywords": [],
-  "author": "Felipe Micheletti",
   "license": "ISC",
   "type": "commonjs",
   "bugs": {
