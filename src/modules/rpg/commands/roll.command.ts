@@ -10,18 +10,29 @@ export default {
             option
                 .setName("dados")
                 .setDescription("Formato do dado (ex: 1d20)")
-                .setRequired(true) ),
+                .setRequired(true) )
+        .addBooleanOption( (option) =>
+            option
+                .setName("secreto")
+                .setDescription("Rolar o dado de forma secreta")
+                .setRequired(false) ),
 
     async execute(interaction: ChatInputCommandInteraction) {
         try {
             const expression = interaction.options.getString("dados", true);
+            const secret = interaction.options.getBoolean("secreto", false) || false;
 
             const result = RollService.execute({
                 expression,
                 username: interaction.user.username,
             });
 
-            await interaction.reply(result.message);
+            if (secret) {
+                await interaction.reply({ content: "🎲 Você rolou os dados... o destino decidiu."});
+                await RollService.sendRollToGM(interaction, result);
+            } else {
+                await interaction.reply(result.message);
+            }
         } catch (error) {
             if (error instanceof RollDiceValidationError) {
                 await interaction.reply({ content: error.message, ephemeral: true, });

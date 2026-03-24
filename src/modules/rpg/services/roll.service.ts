@@ -1,3 +1,4 @@
+import { Interaction } from 'discord.js';
 import { RollDiceValidationError } from "../dto/roll.dto";
 import { RollDiceInput, RollDiceOutput } from "../interfaces/roll.interface";
 
@@ -43,5 +44,22 @@ export class RollService {
         }
 
         return results;
+    }
+
+    static async sendRollToGM(interaction: Interaction, resultado: RollDiceOutput) {
+        const guild = interaction.guild;
+        if (!guild) return;
+
+        const gmChannel = guild.channels.cache.find( channel => channel.name === "roll-secreto" && channel.isTextBased() );
+
+        if (!gmChannel || !gmChannel.isTextBased()) return;
+
+        await gmChannel.send({
+            content:
+                `🎲 **Rolagem secreta**\n` +
+                `Jogador: ${interaction.user.tag}\n` +
+                `Rolagem: **${resultado.quantity}d${resultado.faces}**\n`+
+                `Resultados: [${resultado.results.join(", ")}]\nTotal: **${resultado.total}**`,
+        })
     }
 }
