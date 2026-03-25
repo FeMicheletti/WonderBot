@@ -11,7 +11,8 @@ export interface Track {
 export interface GuildMusicSession {
     guildId: string;
     connection: VoiceConnection | null;
-    player: AudioPlayer;
+    player: AudioPlayer | null;
+    channel: string;
+    currentTrack: number;
     queue: Track[];
-    currentTrack: Track | null;
 };

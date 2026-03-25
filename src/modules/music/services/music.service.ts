@@ -1,179 +1,108 @@
-import {
-    AudioPlayerStatus,
-    NoSubscriberBehavior,
-    VoiceConnectionStatus,
-    createAudioPlayer,
-    createAudioResource,
-    entersState,
-    getVoiceConnection,
-    joinVoiceChannel,
-    StreamType,
-} from "@discordjs/voice";
-import type { Guild, GuildMember } from "discord.js";
+import { ChatInputCommandInteraction, EmbedBuilder, GuildMember, InteractionReplyOptions, MessageFlags } from "discord.js";
 import play from "play-dl";
-import { AppError } from "../../../shared/errors/app.error";
-import { GuildMusicSession, Track } from "../interfaces/music.interface";
+import { MusicDatabase } from "../../../storage/tables/music.table";
+import { GuildMusicSession, Track } from "../../../storage/interfaces/music.interface";
 
 export class MusicService {
-    private static sessions = new Map<string, GuildMusicSession>();
+    static async play(member: GuildMember, url: string, interaction: ChatInputCommandInteraction): Promise<InteractionReplyOptions> {
+        const isYoutube = play.yt_validate(url) === "video";
 
-    static getSession(guildId: string): GuildMusicSession {
-        let session = this.sessions.get(guildId);
+        if (!isYoutube) return {
+            content: "Envie um link válido de vídeo do YouTube.",
+            flags: MessageFlags.Ephemeral
+        };
+
+        const video = await play.video_basic_info(url);
+
+        const track = {
+            title: video.video_details.title || "Unknown Title",
+            url,
+            requestedBy: interaction.user.username,
+            duration: video.video_details.durationRaw,
+            thumbnail: video.video_details.thumbnails?.[0]?.url,
+        };
+
+        const result = await MusicService.queueManager(interaction.guildId || "", member.voice.channelId!, track);
+
+        return { content: result };
+    }
+
+    static async queue(guildId: string):  Promise<InteractionReplyOptions> {
+        const musicDb = new MusicDatabase();
+        const session = musicDb.findById(guildId);
+
+        if (!session || !session.queue || session.queue.length === 0) return { content: "📭 A fila está vazia."};
+
+        const embed = new EmbedBuilder()
+            .setTitle("🎶 Fila de músicas")
+            .setDescription(
+                session.currentTrack
+                    ? `**Tocando agora:** ${session.queue[session.currentTrack].title}\nPedido por: ${session.queue[session.currentTrack].requestedBy}`
+                    : "Nada tocando no momento."
+            )
+            .addFields({
+                name: "Próximas",
+                value:
+                    session.queue.length > 0
+                        ? session.queue.map((track, index) =>`${index + 1}. **${track.title}** — pedido por ${track.requestedBy}`).join("\n") 
+                        : "Nenhuma música na fila.",
+            });
+
+        return { embeds: [embed], content: "" };
+    }
+
+    static async stop(guildId: string): Promise<InteractionReplyOptions> {
+        const musicDb = new MusicDatabase();
+        const session = musicDb.findById(guildId);
+
+        if (session) {
+            session.queue = [];
+            musicDb.upsert(session);
+        }
+
+        return { content: "⏹️ Música parada e fila limpa." };
+    }
+
+    static async skip(guildId: string): Promise<InteractionReplyOptions> {
+        const musicDb = new MusicDatabase();
+        const session = musicDb.findById(guildId);
+
+        if (!session || !session.queue || session.queue.length === 0) return { content: "📭 A fila está vazia."};
+        
+        const skippedTrack = session.queue[session.currentTrack];
+        session.currentTrack++;
+
+        if (session.currentTrack >= session.queue.length) {
+            session.currentTrack = 0;
+            session.queue = [];
+        }
+
+        musicDb.upsert(session);
+
+        return { content: `⏭️ Pulando: **${skippedTrack.title}**` };
+    }
+
+    static async queueManager(guild: string, channel: string, track: Track): Promise<string> {
+        const musicDb = new MusicDatabase();
+        const session = musicDb.findById(guild);
 
         if (!session) {
-            session = {
-                guildId,
+            const newSession: GuildMusicSession = {
+                guildId: guild,
+                channel: channel,
                 connection: null,
-                player: createAudioPlayer({
-                    behaviors: {
-                        noSubscriber: NoSubscriberBehavior.Pause,
-                    },
-                }),
-                queue: [],
-                currentTrack: null,
+                player: null,
+                currentTrack: 0,
+                queue: [track],
             };
+            musicDb.upsert(newSession);
 
-            session.player.on(AudioPlayerStatus.Idle, async () => {
-                await this.playNext(guildId);
-            });
+            return `🎵 Tocando agora: **${track.title}**`;
+        } else {
+            session.queue.push(track);
+            musicDb.upsert(session);
 
-            session.player.on("error", async (error) => {
-                console.error(`[MUSIC] Erro no player da guild ${guildId}`, error);
-                await this.playNext(guildId);
-            });
-
-            this.sessions.set(guildId, session);
+            return `📥 Adicionado à fila: **${track.title}** (posição ${session.queue.length})`;
         }
-
-        return session;
-    }
-
-    static async ensureConnection(guild: Guild, member: GuildMember): Promise<GuildMusicSession> {
-        const voiceChannel = member.voice.channel;
-
-        if (!voiceChannel) {
-            throw new AppError("Você precisa estar em uma call para usar este comando.");
-        }
-
-        const session = this.getSession(guild.id);
-
-        const currentConnection = getVoiceConnection(guild.id);
-        if (currentConnection) {
-            session.connection = currentConnection;
-            return session;
-        }
-
-        const connection = joinVoiceChannel({
-            channelId: voiceChannel.id,
-            guildId: guild.id,
-            adapterCreator: guild.voiceAdapterCreator,
-            selfDeaf: true,
-        });
-
-        connection.on("stateChange", (_, newState) => {
-            console.log("[VOICE] state:", newState.status);
-        });
-
-        try {
-            await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
-        } catch (error) {
-            console.error("[VOICE] Não chegou em Ready", error);
-            console.log("[VOICE] channelId:", voiceChannel.id);
-            console.log("[VOICE] guildId:", guild.id);
-            connection.destroy();
-            throw new AppError("Não consegui conectar na call a tempo. Tente novamente.");
-        }
-
-        connection.subscribe(session.player);
-        session.connection = connection;
-
-        return session;
-    }
-
-    static async addTrack(params: { guild: Guild; member: GuildMember; track: Track }) {
-        const session = await this.ensureConnection(params.guild, params.member);
-
-        session.queue.push(params.track);
-
-        const wasIdle = !session.currentTrack;
-
-        if (wasIdle) await this.playNext(params.guild.id);
-
-        return {
-            position: session.queue.length,
-            track: params.track,
-            startedNow: wasIdle,
-        };
-    }
-
-    static async playNext(guildId: string): Promise<void> {
-        const session = this.sessions.get(guildId);
-        if (!session) return;
-
-        const nextTrack = session.queue.shift() ?? null;
-
-        if (!nextTrack) {
-            session.currentTrack = null;
-            return;
-        }
-
-        session.currentTrack = nextTrack;
-
-        try {
-            const stream = await play.stream(nextTrack.url);
-
-            const resource = createAudioResource(stream.stream, {
-                inputType: stream.type ?? StreamType.Arbitrary,
-            });
-
-            session.player.play(resource);
-        } catch (error) {
-            console.error(`[MUSIC] Erro ao tocar ${nextTrack.title}`, error);
-            session.currentTrack = null;
-            await this.playNext(guildId);
-        }
-    }
-
-    static skip(guildId: string) {
-        const session = this.sessions.get(guildId);
-
-        if (!session || !session.currentTrack) {
-            throw new AppError("Não há música tocando no momento.");
-        }
-
-        const skippedTrack = session.currentTrack;
-        session.player.stop(true);
-
-        return { skippedTrack };
-    }
-
-    static stop(guildId: string) {
-        const session = this.sessions.get(guildId);
-
-        if (!session) {
-            throw new AppError("Não há sessão de música ativa nesta guild.");
-        }
-
-        session.queue = [];
-        session.currentTrack = null;
-        session.player.stop(true);
-
-        if (session.connection) {
-            session.connection.destroy();
-            session.connection = null;
-        }
-
-        this.sessions.delete(guildId);
-    }
-
-    static getQueue(guildId: string) {
-        const session = this.sessions.get(guildId);
-
-        if (!session) return { currentTrack: null, queue: [] };
-
-        return {
-            currentTrack: session.currentTrack,
-            queue: session.queue,
-        };
     }
 }
