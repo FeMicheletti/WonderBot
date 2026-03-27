@@ -45,13 +45,13 @@ class Deploy {
         const rest = new REST({ version: '10' }).setToken(env.discordToken);
 
         try {
-            console.log(`Registrando ${commands.length} comando(s)...`);
+            logger.info(`Registrando ${commands.length} comando(s)...`);
 
             await rest.put( Routes.applicationGuildCommands( env.clientId, env.guildId ), { body: commands } );
 
-            console.log('Comandos registrados com sucesso.');
+            logger.info('Comandos registrados com sucesso.');
         } catch (error) {
-            console.error(error);
+            logger.error('Erro ao registrar comandos:', error);
         }
     }
 }

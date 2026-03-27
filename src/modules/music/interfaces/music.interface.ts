@@ -10,9 +10,10 @@ export interface Track {
 
 export interface GuildMusicSession {
     guildId: string;
-    connection: VoiceConnection | null;
-    player: AudioPlayer | null;
-    channel: string;
+    connection: VoiceConnection;
+    player: AudioPlayer;
+    channelId: string;
     currentTrack: number;
     queue: Track[];
-};
+    isPlaying: boolean;
+}

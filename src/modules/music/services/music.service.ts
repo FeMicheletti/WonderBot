@@ -1,108 +1,84 @@
-import { ChatInputCommandInteraction, EmbedBuilder, GuildMember, InteractionReplyOptions, MessageFlags } from "discord.js";
+import { ChatInputCommandInteraction, EmbedBuilder, GuildMember, InteractionEditReplyOptions, InteractionReplyOptions, MessageFlags } from "discord.js";
 import play from "play-dl";
-import { MusicDatabase } from "../../../storage/tables/music.table";
-import { GuildMusicSession, Track } from "../../../storage/interfaces/music.interface";
+import { Track } from "../interfaces/music.interface";
+import { MusicManager } from "../managers/music.manager";
 
 export class MusicService {
-    static async play(member: GuildMember, url: string, interaction: ChatInputCommandInteraction): Promise<InteractionReplyOptions> {
-        const isYoutube = play.yt_validate(url) === "video";
+	private static manager = new MusicManager();
 
-        if (!isYoutube) return {
-            content: "Envie um link válido de vídeo do YouTube.",
-            flags: MessageFlags.Ephemeral
-        };
+	static normalizeYouTubeUrl(rawUrl: string): string | null {
+		try {
+			const url = new URL(rawUrl);
 
-        const video = await play.video_basic_info(url);
+			if (url.hostname === "youtu.be" || url.hostname === "www.youtu.be" ) {
+				const id = url.pathname.slice(1);
+				if (!id) return null;
+				return `https://www.youtube.com/watch?v=${id}`;
+			}
 
-        const track = {
-            title: video.video_details.title || "Unknown Title",
-            url,
-            requestedBy: interaction.user.username,
-            duration: video.video_details.durationRaw,
-            thumbnail: video.video_details.thumbnails?.[0]?.url,
-        };
+			if ( url.hostname === "youtube.com" || url.hostname === "www.youtube.com" || url.hostname === "m.youtube.com") {
+				const id = url.searchParams.get("v");
+				if (!id) return null;
+				return `https://www.youtube.com/watch?v=${id}`;
+			}
 
-        const result = await MusicService.queueManager(interaction.guildId || "", member.voice.channelId!, track);
+			return null;
+		} catch {
+			return null;
+		}
+	}
 
-        return { content: result };
-    }
+	static async play( member: GuildMember, url: string, interaction: ChatInputCommandInteraction ): Promise<InteractionEditReplyOptions> {
+		if (!interaction.guild) return { content: "Esse comando só pode ser usado em servidor." };
 
-    static async queue(guildId: string):  Promise<InteractionReplyOptions> {
-        const musicDb = new MusicDatabase();
-        const session = musicDb.findById(guildId);
+		const voiceChannel = member.voice.channel;
+		if (!voiceChannel) return { content: "Você precisa estar em um canal de voz." };
 
-        if (!session || !session.queue || session.queue.length === 0) return { content: "📭 A fila está vazia."};
+		const normalizedUrl = this.normalizeYouTubeUrl(url);
 
-        const embed = new EmbedBuilder()
-            .setTitle("🎶 Fila de músicas")
-            .setDescription(
-                session.currentTrack
-                    ? `**Tocando agora:** ${session.queue[session.currentTrack].title}\nPedido por: ${session.queue[session.currentTrack].requestedBy}`
-                    : "Nada tocando no momento."
-            )
-            .addFields({
-                name: "Próximas",
-                value:
-                    session.queue.length > 0
-                        ? session.queue.map((track, index) =>`${index + 1}. **${track.title}** — pedido por ${track.requestedBy}`).join("\n") 
-                        : "Nenhuma música na fila.",
-            });
+		if (!normalizedUrl) return { content: "Envie um link válido de vídeo do YouTube." };
 
-        return { embeds: [embed], content: "" };
-    }
+		const video = await play.video_basic_info(normalizedUrl);
 
-    static async stop(guildId: string): Promise<InteractionReplyOptions> {
-        const musicDb = new MusicDatabase();
-        const session = musicDb.findById(guildId);
+		const track: Track = {
+			title: video.video_details.title || "Unknown Title",
+			url: normalizedUrl,
+			requestedBy: interaction.user.username,
+			duration: video.video_details.durationRaw,
+			thumbnail: video.video_details.thumbnails?.[0]?.url,
+		};  
 
-        if (session) {
-            session.queue = [];
-            musicDb.upsert(session);
-        }
+		const result = await this.manager.enqueue(interaction.guild, voiceChannel, track);
 
-        return { content: "⏹️ Música parada e fila limpa." };
-    }
+		return { content: result.message };
+	}
 
-    static async skip(guildId: string): Promise<InteractionReplyOptions> {
-        const musicDb = new MusicDatabase();
-        const session = musicDb.findById(guildId);
+	static async queue(guildId: string): Promise<InteractionReplyOptions> {
+		const queue = this.manager.getQueue(guildId);
 
-        if (!session || !session.queue || session.queue.length === 0) return { content: "📭 A fila está vazia."};
-        
-        const skippedTrack = session.queue[session.currentTrack];
-        session.currentTrack++;
+		if (!queue || !queue.current) return { content: "📭 A fila está vazia." };
 
-        if (session.currentTrack >= session.queue.length) {
-            session.currentTrack = 0;
-            session.queue = [];
-        }
+		const embed = new EmbedBuilder()
+			.setTitle("🎶 Fila de músicas")
+			.setDescription( `**Tocando agora:** ${queue.current.title}\nPedido por: ${queue.current.requestedBy}` )
+			.addFields({
+				name: "Próximas",
+				value:
+				queue.upcoming.length > 0
+					? queue.upcoming
+						.map((track: Track, index: number) => `${index + 1}. **${track.title}** — pedido por ${track.requestedBy}`)
+						.join("\n")
+					: "Nenhuma música na fila.",
+			});
 
-        musicDb.upsert(session);
+		return { embeds: [embed] };
+	}
 
-        return { content: `⏭️ Pulando: **${skippedTrack.title}**` };
-    }
+	static async stop(guildId: string): Promise<InteractionReplyOptions> {
+		return { content: this.manager.stop(guildId) };
+	}
 
-    static async queueManager(guild: string, channel: string, track: Track): Promise<string> {
-        const musicDb = new MusicDatabase();
-        const session = musicDb.findById(guild);
-
-        if (!session) {
-            const newSession: GuildMusicSession = {
-                guildId: guild,
-                channel: channel,
-                connection: null,
-                player: null,
-                currentTrack: 0,
-                queue: [track],
-            };
-            musicDb.upsert(newSession);
-
-            return `🎵 Tocando agora: **${track.title}**`;
-        } else {
-            session.queue.push(track);
-            musicDb.upsert(session);
-
-            return `📥 Adicionado à fila: **${track.title}** (posição ${session.queue.length})`;
-        }
-    }
+	static async skip(guildId: string): Promise<InteractionReplyOptions> {
+		return { content: this.manager.skip(guildId) };
+	}
 }
