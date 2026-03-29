@@ -20,6 +20,13 @@ class Deploy {
         logger.info('Deploy finalizado');
     }
 
+    public async clearCommands(rest: REST): Promise<void> {
+        await rest.put(
+            Routes.applicationCommands( env.clientId ),
+            { body: [] }
+        );
+    }
+
     private async getCommands(): Promise<SlashCommandBuilder[]> {
         const allCommands:  SlashCommandBuilder[] = [];
 
@@ -44,10 +51,12 @@ class Deploy {
     private async deployCommands(commands: SlashCommandBuilder[]): Promise<void> {
         const rest = new REST({ version: '10' }).setToken(env.discordToken);
 
+        await this.clearCommands(rest);
+
         try {
             logger.info(`Registrando ${commands.length} comando(s)...`);
 
-            await rest.put( Routes.applicationGuildCommands( env.clientId, env.guildId ), { body: commands } );
+            await rest.put( Routes.applicationCommands( env.clientId ), { body: commands } );
 
             logger.info('Comandos registrados com sucesso.');
         } catch (error) {
