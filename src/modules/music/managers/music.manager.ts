@@ -3,6 +3,7 @@ import type { Guild, VoiceBasedChannel } from "discord.js";
 import { Track, GuildMusicSession } from "../interfaces/music.interface";
 import youtubeDl from "youtube-dl-exec";
 import logger from "../../../shared/utils/logger.util";
+import { request } from "undici";
 
 export class MusicManager {
 	private sessions = new Map<string, GuildMusicSession>();
@@ -130,8 +131,10 @@ export class MusicManager {
 				abr: audioFormat?.abr,
 			}));
 
-			const resource = createAudioResource(audioUrl, {
-				inputType: StreamType.Arbitrary,
+			const { body } = await request(audioUrl);
+
+			const resource = createAudioResource(body, {
+				inputType: StreamType.WebmOpus,
 				inlineVolume: true,
 			});
 
