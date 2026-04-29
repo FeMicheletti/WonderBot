@@ -122,13 +122,13 @@ export class MusicManager {
 				throw new Error("Não consegui extrair uma URL de áudio com yt-dlp.");
 			}
 
-			// logger.info("[MusicManager] Áudio extraído:", {
-			// 	title: info?.title,
-			// 	formatId: audioFormat?.format_id,
-			// 	ext: audioFormat?.ext,
-			// 	acodec: audioFormat?.acodec,
-			// 	abr: audioFormat?.abr,
-			// });
+			logger.info("[MusicManager] Áudio extraído:", {
+				title: info?.title,
+				formatId: audioFormat?.format_id,
+				ext: audioFormat?.ext,
+				acodec: audioFormat?.acodec,
+				abr: audioFormat?.abr,
+			});
 
 			const resource = createAudioResource(audioUrl, {
 				inputType: StreamType.Arbitrary,
