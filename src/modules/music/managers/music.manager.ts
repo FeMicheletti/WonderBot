@@ -122,13 +122,13 @@ export class MusicManager {
 				throw new Error("Não consegui extrair uma URL de áudio com yt-dlp.");
 			}
 
-			logger.info("[MusicManager] Áudio extraído:", {
+			logger.info("[MusicManager] Áudio extraído:", JSON.stringify({
 				title: info?.title,
 				formatId: audioFormat?.format_id,
 				ext: audioFormat?.ext,
 				acodec: audioFormat?.acodec,
 				abr: audioFormat?.abr,
-			});
+			}));
 
 			const resource = createAudioResource(audioUrl, {
 				inputType: StreamType.Arbitrary,
@@ -141,6 +141,7 @@ export class MusicManager {
 			session.player.once(AudioPlayerStatus.Idle, () => {
 				session.isPlaying = false;
 			});
+			logger.info(`[MusicManager] Iniciando reprodução: ${track.title}`);
 		} catch (error) {
 			logger.error("[MusicManager] Erro ao tocar faixa com yt-dlp:", error);
 
