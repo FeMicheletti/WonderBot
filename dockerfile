@@ -9,8 +9,9 @@ RUN apt-get update && apt-get install -y \
     curl \
     git \
     ca-certificates \
-    opus-tools \
+    libopus0 \
     libopus-dev \
+    libsodium23 \
     libsodium-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -21,6 +22,8 @@ RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
 COPY package*.json ./
 
 RUN npm install
+
+RUN npm install @discordjs/opus sodium-native
 
 COPY . .
 
