@@ -44,8 +44,7 @@ export class MusicService {
 			noWarnings: true,
 			noCheckCertificates: true,
 			skipDownload: true,
-			cookies: "src/app/cookies.txt",
-			format: "bestaudio[ext=webm][acodec=opus]/bestaudio"
+			cookies: "src/app/cookies.txt"
 		}) as any;
 
 		const track: Track = {
