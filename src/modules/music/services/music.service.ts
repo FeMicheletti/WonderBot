@@ -1,5 +1,4 @@
-import { ChatInputCommandInteraction, EmbedBuilder, GuildMember, InteractionEditReplyOptions, InteractionReplyOptions, MessageFlags } from "discord.js";
-import play from "play-dl";
+import { ChatInputCommandInteraction, EmbedBuilder, GuildMember, InteractionEditReplyOptions, InteractionReplyOptions } from "discord.js";
 import { Track } from "../interfaces/music.interface";
 import { MusicManager } from "../managers/music.manager";
 import youtubeDl from "youtube-dl-exec";
@@ -45,6 +44,7 @@ export class MusicService {
 			noWarnings: true,
 			noCheckCertificates: true,
 			skipDownload: true,
+			cookies: "src/app/cookies.txt"
 		}) as any;
 
 		const track: Track = {

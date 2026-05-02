@@ -107,7 +107,7 @@ export class MusicManager {
 		logger.info(`[MusicManager] Tocando: ${track.title} (${track.url})`);
 
 		try {
-			const info = await youtubeDl(track.url, { dumpSingleJson: true, noWarnings: true, noCheckCertificates: true, preferFreeFormats: true }) as any;
+			const info = await youtubeDl(track.url, { dumpSingleJson: true, noWarnings: true, noCheckCertificates: true, preferFreeFormats: true, cookies: "src/app/cookies.txt" }) as any;
 
 			const audioFormat =
 				info?.requested_downloads?.find((f: any) => f?.url && f?.acodec !== "none") ||
