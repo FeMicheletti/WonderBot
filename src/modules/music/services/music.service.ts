@@ -2,6 +2,8 @@ import { ChatInputCommandInteraction, EmbedBuilder, GuildMember, InteractionEdit
 import play from "play-dl";
 import { Track } from "../interfaces/music.interface";
 import { MusicManager } from "../managers/music.manager";
+import youtubeDl from "youtube-dl-exec";
+import logger from "../../../shared/utils/logger.util";
 
 export class MusicService {
 	private static manager = new MusicManager();
@@ -38,15 +40,22 @@ export class MusicService {
 
 		if (!normalizedUrl) return { content: "Envie um link válido de vídeo do YouTube." };
 
-		const video = await play.video_basic_info(normalizedUrl);
+		const video = await youtubeDl(normalizedUrl, {
+			dumpSingleJson: true,
+			noWarnings: true,
+			noCheckCertificates: true,
+			skipDownload: true,
+		}) as any;
 
 		const track: Track = {
-			title: video.video_details.title || "Unknown Title",
+			title: video.title || "Unknown Title",
 			url: normalizedUrl,
 			requestedBy: interaction.user.username,
-			duration: video.video_details.durationRaw,
-			thumbnail: video.video_details.thumbnails?.[0]?.url,
-		};  
+			duration: video.duration_string,
+			thumbnail: video.thumbnail,
+		};
+
+		logger.info(JSON.stringify(track));
 
 		const result = await this.manager.enqueue(interaction.guild, voiceChannel, track);
 
