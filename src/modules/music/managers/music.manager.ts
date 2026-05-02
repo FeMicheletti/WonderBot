@@ -1,4 +1,4 @@
-import { AudioPlayerStatus, NoSubscriberBehavior, StreamType, VoiceConnection, VoiceConnectionStatus, createAudioPlayer, createAudioResource, entersState, joinVoiceChannel } from "@discordjs/voice";
+import { AudioPlayerStatus, NoSubscriberBehavior, VoiceConnectionStatus, createAudioPlayer, createAudioResource, entersState, joinVoiceChannel } from "@discordjs/voice";
 import type { Guild, VoiceBasedChannel } from "discord.js";
 import { Track, GuildMusicSession } from "../interfaces/music.interface";
 import youtubeDl from "youtube-dl-exec";
@@ -110,8 +110,8 @@ export class MusicManager {
 			const info = await youtubeDl(track.url, { dumpSingleJson: true, noWarnings: true, noCheckCertificates: true, preferFreeFormats: true, cookies: "src/app/cookies.txt" }) as any;
 
 			const audioFormat =
-				info?.requested_downloads?.find((f: any) => f?.url && f?.acodec !== "none") ||
-				info?.formats?.filter((f: any) => f?.url && f?.acodec !== "none")?.sort((a: any, b: any) => (b.abr ?? 0) - (a.abr ?? 0))[0];
+				info?.requested_downloads?.[0] ||
+				info?.formats ?.filter((f: any) => f?.url && f?.acodec !== "none") ?.sort((a: any, b: any) => (b.abr ?? 0) - (a.abr ?? 0))[0];
 
 			const audioUrl = audioFormat?.url;
 
@@ -134,7 +134,6 @@ export class MusicManager {
 			const { body } = await request(audioUrl);
 
 			const resource = createAudioResource(body, {
-				inputType: StreamType.WebmOpus,
 				inlineVolume: true,
 			});
 
