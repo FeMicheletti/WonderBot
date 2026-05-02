@@ -4,6 +4,7 @@ WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     python3 \
+    python3-pip \
     python-is-python3 \
     ffmpeg \
     curl \
@@ -15,9 +16,7 @@ RUN apt-get update && apt-get install -y \
     libsodium-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp \
-    -o /usr/local/bin/yt-dlp && \
-    chmod a+rx /usr/local/bin/yt-dlp
+RUN python3 -m pip install --break-system-packages -U "yt-dlp[default]"
 
 COPY package*.json ./
 
