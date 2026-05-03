@@ -44,7 +44,8 @@ export class MusicService {
 			noWarnings: true,
 			noCheckCertificates: true,
 			skipDownload: true,
-			cookies: "src/app/cookies.txt"
+			cookies: "src/app/cookies.txt",
+			remoteComponent: "ejs:github",
 		}) as any;
 
 		const track: Track = {

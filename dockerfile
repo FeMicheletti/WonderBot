@@ -18,6 +18,11 @@ RUN apt-get update && apt-get install -y \
 
 RUN python3 -m pip install --break-system-packages -U "yt-dlp[default]"
 
+RUN curl -fsSL https://deno.land/install.sh | sh
+
+ENV DENO_INSTALL=/root/.deno
+ENV PATH="${DENO_INSTALL}/bin:${PATH}"
+
 COPY package*.json ./
 
 RUN npm install
