@@ -39,7 +39,7 @@ export class MusicManager {
 				name: "com cookies / default",
 				options: {
 					...commonOptions,
-					cookies: "/app/cookies/cookies.txt",
+					cookies: "/src/app/cookies.txt",
 					extractorArgs: "youtube:player_client=default",
 				},
 			},
@@ -47,7 +47,7 @@ export class MusicManager {
 				name: "com cookies / web_creator",
 				options: {
 					...commonOptions,
-					cookies: "/app/cookies/cookies.txt",
+					cookies: "/src/app/cookies.txt",
 					extractorArgs: "youtube:player_client=web_creator",
 				},
 			},
