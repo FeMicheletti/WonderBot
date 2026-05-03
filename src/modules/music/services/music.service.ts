@@ -39,23 +39,22 @@ export class MusicService {
 
 		if (!normalizedUrl) return { content: "Envie um link válido de vídeo do YouTube." };
 
-		const video = await youtubeDl(normalizedUrl, {
-			dumpSingleJson: true,
-			noWarnings: true,
-			noCheckCertificates: true,
-			skipDownload: true,
-			cookies: "src/app/cookies.txt",
-			remoteComponent: "ejs:github",
-		}) as any;
+		// const video = await youtubeDl(normalizedUrl, {
+		// 	dumpSingleJson: true,
+		// 	noWarnings: true,
+		// 	noCheckCertificates: true,
+		// 	skipDownload: true,
+		// 	cookies: "src/app/cookies.txt",
+		// 	remoteComponent: "ejs:github",
+		// }) as any;
 
 		const track: Track = {
-			title: video.title || "Unknown Title",
+			title: "Carregando título...",
 			url: normalizedUrl,
 			requestedBy: interaction.user.username,
-			duration: video.duration_string,
-			thumbnail: video.thumbnail,
+			duration: undefined,
+			thumbnail: undefined,
 		};
-
 		logger.info(JSON.stringify(track));
 
 		const result = await this.manager.enqueue(interaction.guild, voiceChannel, track);

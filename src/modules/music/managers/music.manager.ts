@@ -12,6 +12,62 @@ export class MusicManager {
 		return this.sessions.get(guildId);
 	}
 
+	async getYoutubeInfo(url: string): Promise<any> {
+		const commonOptions = {
+			dumpSingleJson: true,
+			noWarnings: true,
+			noCheckCertificates: true,
+			remoteComponents: "ejs:github",
+		};
+
+		const attempts = [
+			{
+				name: "sem cookies / default",
+				options: {
+					...commonOptions,
+					extractorArgs: "youtube:player_client=default",
+				},
+			},
+			{
+				name: "sem cookies / web_creator",
+				options: {
+					...commonOptions,
+					extractorArgs: "youtube:player_client=web_creator",
+				},
+			},
+			{
+				name: "com cookies / default",
+				options: {
+					...commonOptions,
+					cookies: "/app/cookies/cookies.txt",
+					extractorArgs: "youtube:player_client=default",
+				},
+			},
+			{
+				name: "com cookies / web_creator",
+				options: {
+					...commonOptions,
+					cookies: "/app/cookies/cookies.txt",
+					extractorArgs: "youtube:player_client=web_creator",
+				},
+			},
+		];
+
+		let lastError: unknown;
+
+		for (const attempt of attempts) {
+			try {
+				logger.info(`[yt-dlp] Tentando: ${attempt.name}`);
+				return await youtubeDl(url, attempt.options) as any;
+			} catch (error) {
+				lastError = error;
+				logger.warn(`[yt-dlp] Falhou: ${attempt.name}`, error);
+			}
+		}
+
+		throw lastError;
+	}
+
 	async createOrGetSession(guild: Guild, voiceChannel: VoiceBasedChannel): Promise<GuildMusicSession> {
 		const existing = this.sessions.get(guild.id);
 		if (existing) return existing;
@@ -107,15 +163,7 @@ export class MusicManager {
 		logger.info(`[MusicManager] Tocando: ${track.title} (${track.url})`);
 
 		try {
-			const info = await youtubeDl(track.url, { 
-				dumpSingleJson: true, 
-				noWarnings: true, 
-				noCheckCertificates: true, 
-				preferFreeFormats: true, 
-				cookies: "src/app/cookies.txt", 
-				format: "bestaudio/best",
-				remoteComponent: "ejs:github",
-			}) as any;
+			const info = await this.getYoutubeInfo(track.url);
 
 			const audioFormat =
 				info?.requested_downloads?.[0] ||
