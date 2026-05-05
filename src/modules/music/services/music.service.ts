@@ -94,4 +94,12 @@ export class MusicService {
 	static async skip(guildId: string): Promise<InteractionReplyOptions> {
 		return { content: this.manager.skip(guildId) };
 	}
+
+	static async pause(guildId: string): Promise<InteractionReplyOptions> {
+		return { content: this.manager.pause(guildId) };
+	}
+
+	static async resume(guildId: string): Promise<InteractionReplyOptions> {
+		return { content: this.manager.resume(guildId) };
+	}
 }

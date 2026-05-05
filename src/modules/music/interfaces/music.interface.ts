@@ -16,5 +16,7 @@ export interface GuildMusicSession {
     currentTrack: number;
     queue: Track[];
     isPlaying: boolean;
+    isPaused: boolean;
     idleTimeout?: NodeJS.Timeout;
+    pauseTimeout?: NodeJS.Timeout;
 }

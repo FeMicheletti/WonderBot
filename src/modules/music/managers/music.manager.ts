@@ -8,6 +8,8 @@ import { CookieService } from "../services/cookies.service";
 
 export class MusicManager {
 	private readonly IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+	private readonly PAUSE_TIMEOUT_MS = 10 * 60 * 1000;
+
 	private sessions = new Map<string, GuildMusicSession>();
 
 	getSession(guildId: string): GuildMusicSession | undefined {
@@ -40,6 +42,7 @@ export class MusicManager {
 			currentTrack: 0,
 			queue: [],
 			isPlaying: false,
+			isPaused: false,
 		};
 
 		player.on(AudioPlayerStatus.Idle, async () => {
@@ -87,7 +90,7 @@ export class MusicManager {
 
 		session.queue.push(track);
 
-		if (!session.isPlaying) {
+		if (!session.isPlaying && !session.isPaused) {
 			session.currentTrack = session.queue.length - 1;
 			await this.playCurrent(guild.id);
 		}
@@ -160,12 +163,12 @@ export class MusicManager {
 				inlineVolume: true,
 			});
 
+			this.clearPauseDestroy(session);
+
+			session.isPaused = false;
 			session.isPlaying = true;
 			session.player.play(resource);
 
-			// session.player.once(AudioPlayerStatus.Idle, () => {
-			// 	session.isPlaying = false;
-			// });
 			logger.info(`[MusicManager] Iniciando reprodução: ${track.title}`);
 		} catch (error) {
 			logger.error("[MusicManager] Erro ao tocar faixa com yt-dlp:", error);
@@ -199,6 +202,56 @@ export class MusicManager {
 		return "⏹️ Música parada e fila limpa.";
 	}
 
+	pause(guildId: string): string {
+		const session = this.sessions.get(guildId);
+
+		if (!session || session.queue.length === 0) {
+			return "📭 Não há música tocando no momento.";
+		}
+
+		if (session.isPaused) {
+			return "⏸️ A música já está pausada.";
+		}
+
+		const paused = session.player.pause();
+
+		if (!paused) {
+			return "Não consegui pausar a música.";
+		}
+
+		session.isPlaying = false;
+		session.isPaused = true;
+
+		this.schedulePauseDestroy(guildId);
+
+		return `⏸️ Música pausada: **${session.queue[session.currentTrack]?.title ?? "Desconhecida"}**`;
+	}
+
+	resume(guildId: string): string {
+		const session = this.sessions.get(guildId);
+
+		if (!session || session.queue.length === 0) {
+			return "📭 Não há música para continuar.";
+		}
+
+		if (!session.isPaused) {
+			return "▶️ A música não está pausada.";
+		}
+
+		const resumed = session.player.unpause();
+
+		if (!resumed) {
+			return "Não consegui continuar a música.";
+		}
+
+		this.clearPauseDestroy(session);
+
+		session.isPaused = false;
+		session.isPlaying = true;
+
+		return `▶️ Continuando: **${session.queue[session.currentTrack]?.title ?? "Desconhecida"}**`;
+	}
+
 	getQueue(guildId: string): { current?: Track; upcoming: Track[] } | null {
 		const session = this.sessions.get(guildId);
 		if (!session || session.queue.length === 0) return null;
@@ -218,8 +271,14 @@ export class MusicManager {
 			session.idleTimeout = undefined;
 		}
 
+		if (session.pauseTimeout) {
+			clearTimeout(session.pauseTimeout);
+			session.pauseTimeout = undefined;
+		}
+
 		session.queue = [];
 		session.isPlaying = false;
+		session.isPaused = false;
 
 		try {
 			session.player.stop();
@@ -247,7 +306,7 @@ export class MusicManager {
 
 			if (!currentSession) return;
 
-			if (!currentSession.isPlaying && currentSession.queue.length === 0) {
+			if (!currentSession.isPlaying && !currentSession.isPaused && currentSession.queue.length === 0) {
 				logger.info(`[MusicManager] Timeout de inatividade atingido. Encerrando sessão da guild ${guildId}.`);
 				this.destroySession(guildId);
 			}
@@ -258,6 +317,33 @@ export class MusicManager {
 		if (session.idleTimeout) {
 			clearTimeout(session.idleTimeout);
 			session.idleTimeout = undefined;
+		}
+	}
+
+	private schedulePauseDestroy(guildId: string): void {
+		const session = this.sessions.get(guildId);
+		if (!session) return;
+
+		this.clearPauseDestroy(session);
+
+		logger.info(`[MusicManager] Música pausada. Aguardando 10 minutos antes de sair da call. Guild: ${guildId}`);
+
+		session.pauseTimeout = setTimeout(() => {
+			const currentSession = this.sessions.get(guildId);
+
+			if (!currentSession) return;
+
+			if (currentSession.isPaused && !currentSession.isPlaying) {
+				logger.info(`[MusicManager] Timeout de pause atingido. Encerrando sessão da guild ${guildId}.`);
+				this.destroySession(guildId);
+			}
+		}, this.PAUSE_TIMEOUT_MS);
+	}
+
+	private clearPauseDestroy(session: GuildMusicSession): void {
+		if (session.pauseTimeout) {
+			clearTimeout(session.pauseTimeout);
+			session.pauseTimeout = undefined;
 		}
 	}
 }
