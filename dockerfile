@@ -35,6 +35,4 @@ COPY . .
 
 RUN npm run build
 
-RUN npm run deploy:prod
-
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-c", "npm run deploy:prod && npm run dev"]
