@@ -291,6 +291,31 @@ export class MusicManager {
 		this.sessions.delete(guildId);
 	}
 
+	getNowPlaying(guildId: string): Track | null {
+		const session = this.sessions.get(guildId);
+
+		if (!session || session.queue.length === 0) return null;
+
+		return session.queue[session.currentTrack] ?? null;
+	}
+
+	remove(guildId: string, position: number): string {
+		const session = this.sessions.get(guildId);
+
+		if (!session || session.queue.length === 0) return "📭 A fila está vazia.";
+
+		const upcoming = session.queue.slice(session.currentTrack + 1);
+
+		if (upcoming.length === 0) return "📭 Não há músicas na fila para remover.";
+
+		if (position < 1 || position > upcoming.length) return `Forneça uma posição entre **1 e ${upcoming.length}**.`;
+
+		const queueIndex = session.currentTrack + position;
+		const removedTrack = session.queue.splice(queueIndex, 1)[0];
+
+		return `🗑️ Removido da fila: **${removedTrack.title}**`;
+	}
+
 	private scheduleIdleDestroy(guildId: string): void {
 		const session = this.sessions.get(guildId);
 		if (!session) return;

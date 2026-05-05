@@ -102,4 +102,27 @@ export class MusicService {
 	static async resume(guildId: string): Promise<InteractionReplyOptions> {
 		return { content: this.manager.resume(guildId) };
 	}
+
+	static async nowPlaying(guildId: string): Promise<InteractionReplyOptions> {
+		const track = this.manager.getNowPlaying(guildId);
+
+		if (!track) return { content: "📭 Nenhuma música está tocando no momento." };
+
+		const embed = new EmbedBuilder()
+			.setTitle("🎶 Tocando agora")
+			.setDescription(`**${track.title}**`)
+			.addFields(
+				{ name: "Pedido por", value: track.requestedBy, inline: true },
+				{ name: "Duração", value: track.duration || "Desconhecida", inline: true }
+			)
+			.setURL(track.url);
+
+		if (track.thumbnail) embed.setThumbnail(track.thumbnail);
+
+		return { embeds: [embed] };
+	}
+
+	static async remove(guildId: string, position: number): Promise<InteractionReplyOptions> {
+		return { content: this.manager.remove(guildId, position) };
+	}
 }
