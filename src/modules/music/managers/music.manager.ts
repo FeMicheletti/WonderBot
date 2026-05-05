@@ -7,6 +7,7 @@ import { request } from "undici";
 import { CookieService } from "../services/cookies.service";
 
 export class MusicManager {
+	private readonly IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 	private sessions = new Map<string, GuildMusicSession>();
 
 	getSession(guildId: string): GuildMusicSession | undefined {
@@ -42,10 +43,14 @@ export class MusicManager {
 		};
 
 		player.on(AudioPlayerStatus.Idle, async () => {
+			session.isPlaying = false;
 			session.currentTrack++;
 
 			if (session.currentTrack >= session.queue.length) {
-				this.destroySession(guild.id);
+				session.queue = [];
+				session.currentTrack = 0;
+
+				this.scheduleIdleDestroy(guild.id);
 				return;
 			}
 
@@ -76,14 +81,21 @@ export class MusicManager {
 	async enqueue(guild: Guild, voiceChannel: VoiceBasedChannel, track: Track): Promise<{ message: string; track: Track }> {
 		const session = await this.createOrGetSession(guild, voiceChannel);
 
+		this.clearIdleDestroy(session);
+
+		const wasPlaying = session.isPlaying;
+
 		session.queue.push(track);
 
 		if (!session.isPlaying) {
-			session.currentTrack = 0;
+			session.currentTrack = session.queue.length - 1;
 			await this.playCurrent(guild.id);
 		}
 
-		return { message: session.isPlaying ? `📥 Adicionado à fila: **${track.title}**` : `🎵 Tocando agora: **${track.title}**`, track };
+		return {
+			message: wasPlaying ? `📥 Adicionado à fila: **${track.title}**` : `🎵 Tocando agora: **${track.title}**`,
+			track,
+		};
 	}
 
 	async playCurrent(guildId: string): Promise<void> {
@@ -151,9 +163,9 @@ export class MusicManager {
 			session.isPlaying = true;
 			session.player.play(resource);
 
-			session.player.once(AudioPlayerStatus.Idle, () => {
-				session.isPlaying = false;
-			});
+			// session.player.once(AudioPlayerStatus.Idle, () => {
+			// 	session.isPlaying = false;
+			// });
 			logger.info(`[MusicManager] Iniciando reprodução: ${track.title}`);
 		} catch (error) {
 			logger.error("[MusicManager] Erro ao tocar faixa com yt-dlp:", error);
@@ -201,6 +213,11 @@ export class MusicManager {
 		const session = this.sessions.get(guildId);
 		if (!session) return;
 
+		if (session.idleTimeout) {
+			clearTimeout(session.idleTimeout);
+			session.idleTimeout = undefined;
+		}
+
 		session.queue = [];
 		session.isPlaying = false;
 
@@ -213,5 +230,34 @@ export class MusicManager {
 		} catch {}
 
 		this.sessions.delete(guildId);
+	}
+
+	private scheduleIdleDestroy(guildId: string): void {
+		const session = this.sessions.get(guildId);
+		if (!session) return;
+
+		if (session.idleTimeout) {
+			clearTimeout(session.idleTimeout);
+		}
+
+		logger.info(`[MusicManager] Fila encerrada. Aguardando 5 minutos antes de sair da call. Guild: ${guildId}`);
+
+		session.idleTimeout = setTimeout(() => {
+			const currentSession = this.sessions.get(guildId);
+
+			if (!currentSession) return;
+
+			if (!currentSession.isPlaying && currentSession.queue.length === 0) {
+				logger.info(`[MusicManager] Timeout de inatividade atingido. Encerrando sessão da guild ${guildId}.`);
+				this.destroySession(guildId);
+			}
+		}, this.IDLE_TIMEOUT_MS);
+	}
+
+	private clearIdleDestroy(session: GuildMusicSession): void {
+		if (session.idleTimeout) {
+			clearTimeout(session.idleTimeout);
+			session.idleTimeout = undefined;
+		}
 	}
 }
