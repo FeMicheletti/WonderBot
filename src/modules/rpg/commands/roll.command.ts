@@ -1,21 +1,23 @@
-import { ChatInputCommandInteraction, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, MessageFlags, SlashCommandBuilder } from "discord.js";
 import { RollService } from "../services/roll.service";
 import { RollDiceValidationError } from "../dto/roll.dto";
 
 export default {
     data: new SlashCommandBuilder()
         .setName("roll")
-        .setDescription("Rola dados no formato NdX (ex: 1d20, 2d6)")
-        .addStringOption( (option) =>
+        .setDescription("Rola dados com expressões como 1d20+10, 3d6kh2, 4d6dl1")
+        .addStringOption((option) =>
             option
                 .setName("dados")
-                .setDescription("Formato do dado (ex: 1d20)")
-                .setRequired(true) )
-        .addBooleanOption( (option) =>
+                .setDescription("Ex: 1d20, 1d20+10, 3d6kh2, 4d6dl1")
+                .setRequired(true)
+        )
+        .addBooleanOption((option) =>
             option
                 .setName("secreto")
                 .setDescription("Rolar o dado de forma secreta")
-                .setRequired(false) ),
+                .setRequired(false)
+        ),
 
     async execute(interaction: ChatInputCommandInteraction) {
         try {
@@ -35,7 +37,10 @@ export default {
             }
         } catch (error) {
             if (error instanceof RollDiceValidationError) {
-                await interaction.reply({ content: error.message, ephemeral: true, });
+                await interaction.reply({
+					content: error.message,
+					flags: MessageFlags.Ephemeral,
+				});
                 return;
             }
             throw error;
