@@ -29,6 +29,8 @@ RUN npm install
 
 RUN npm install @discordjs/opus sodium-native
 
+RUN npx playwright install --with-deps chromium
+
 COPY . .
 
 RUN npm run build

@@ -3,6 +3,7 @@ import { Track } from "../interfaces/music.interface";
 import { MusicManager } from "../managers/music.manager";
 import youtubeDl from "youtube-dl-exec";
 import logger from "../../../shared/utils/logger.util";
+import { CookieService } from "./cookies.service";
 
 export class MusicService {
 	private static manager = new MusicManager();
@@ -39,22 +40,25 @@ export class MusicService {
 
 		if (!normalizedUrl) return { content: "Envie um link válido de vídeo do YouTube." };
 
-		// const video = await youtubeDl(normalizedUrl, {
-		// 	dumpSingleJson: true,
-		// 	noWarnings: true,
-		// 	noCheckCertificates: true,
-		// 	skipDownload: true,
-		// 	cookies: "src/app/cookies.txt",
-		// 	remoteComponent: "ejs:github",
-		// }) as any;
+		await CookieService.refreshYoutubeCookiesIfNeeded();
+
+		const video = await youtubeDl(normalizedUrl, {
+			dumpSingleJson: true,
+			noWarnings: true,
+			noCheckCertificates: true,
+			skipDownload: true,
+			cookies: "cookies.txt",
+			remoteComponent: "ejs:github",
+		}) as any;
 
 		const track: Track = {
-			title: "Carregando título...",
+			title: video.title || "Unknown Title",
 			url: normalizedUrl,
 			requestedBy: interaction.user.username,
-			duration: undefined,
-			thumbnail: undefined,
+			duration: video.duration_string,
+			thumbnail: video.thumbnail,
 		};
+
 		logger.info(JSON.stringify(track));
 
 		const result = await this.manager.enqueue(interaction.guild, voiceChannel, track);
