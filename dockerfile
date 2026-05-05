@@ -35,4 +35,4 @@ COPY . .
 
 RUN npm run build
 
-CMD ["sh", "-c", "npm run deploy:prod && npm run dev"]
+CMD ["sh", "-c", "npm run deploy:prod || echo 'Command deploy failed, starting bot anyway'; npm run dev"]

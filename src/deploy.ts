@@ -48,18 +48,43 @@ class Deploy {
     }
 
     private async deployCommands(commands: SlashCommandBuilder[]): Promise<void> {
-        const rest = new REST({ version: '10' }).setToken(env.discordToken);
-
-        await this.clearCommands(rest);
+        const rest = new REST({
+            version: "10",
+            timeout: 30_000,
+        }).setToken(env.discordToken);
 
         try {
             logger.info(`Registrando ${commands.length} comando(s)...`);
 
-            await rest.put( Routes.applicationCommands( env.clientId ), { body: commands } );
+            await this.withTimeout(
+                rest.put(
+                    Routes.applicationCommands(env.clientId),
+                    { body: commands }
+                ),
+                30_000,
+                "Timeout ao registrar comandos globais no Discord."
+            );
 
-            logger.info('Comandos registrados com sucesso.');
+            logger.info("Comandos registrados com sucesso.");
         } catch (error) {
-            logger.error('Erro ao registrar comandos:', error);
+            logger.error("Erro ao registrar comandos:", error);
+            throw error;
+        }
+    }
+
+    private async withTimeout<T>( promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
+        let timeout: NodeJS.Timeout;
+
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            timeout = setTimeout(() => {
+                reject(new Error(errorMessage));
+            }, timeoutMs);
+        });
+
+        try {
+            return await Promise.race([promise, timeoutPromise]);
+        } finally {
+            clearTimeout(timeout!);
         }
     }
 }
