@@ -4,7 +4,6 @@ import { CommandLoader } from './app/commandLoader';
 import logger from './shared/utils/logger.util';
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
 import env from './config/env';
-import { exit } from 'process';
 
 class Deploy {
     CommandLoader: CommandLoader;
@@ -65,4 +64,13 @@ class Deploy {
     }
 }
 
-new Deploy().run();
+new Deploy()
+	.run()
+	.then(() => {
+		logger.info("Processo de deploy encerrado.");
+		process.exit(0);
+	})
+	.catch((error) => {
+		logger.error("Erro fatal no deploy:", error);
+		process.exit(1);
+	});

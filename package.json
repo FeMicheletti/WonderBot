@@ -10,7 +10,8 @@
     "start": "node dist/index.js",
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "typecheck": "tsc --noEmit",
-    "deploy": "ts-node-dev --respawn --transpile-only src/deploy.ts"
+    "deploy": "ts-node --transpile-only src/deploy.ts",
+    "deploy:prod": "node dist/deploy.js"
   },
   "repository": {
     "type": "git",

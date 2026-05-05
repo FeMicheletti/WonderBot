@@ -30,7 +30,7 @@ export class CommandLoader {
 
             if (entry.isDirectory()) {
                 files.push(...this.getAllCommandFiles(fullPath));
-            } else if (entry.isFile() && entry.name.endsWith('.command.ts')) {
+            } else if (entry.isFile() && (entry.name.endsWith(".command.ts") || entry.name.endsWith(".command.js"))) {
                 files.push(fullPath);
             }
         }

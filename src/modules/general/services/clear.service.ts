@@ -20,7 +20,7 @@ export class ClearService {
 		if (!botMember?.permissionsIn(channel).has(PermissionFlagsBits.ManageMessages)) return { content: "Eu preciso da permissão **Gerenciar mensagens** nesse canal." };
 
 		try {
-			const deletedMessages = await channel.bulkDelete(deleteCount, false);
+			const deletedMessages = await channel.bulkDelete(deleteCount, true);
 
 			return { content: `🧹 ${deletedMessages.size} mensagem(ns) excluída(s) com sucesso.` };
 		} catch (error) {

@@ -1,4 +1,4 @@
-import { ChatInputCommandInteraction, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
+import { ChatInputCommandInteraction, MessageFlags, PermissionFlagsBits, SlashCommandBuilder } from "discord.js";
 import { ClearService } from "../services/clear.service";
 
 export default {
@@ -16,6 +16,8 @@ export default {
 		),
 
 	async execute(interaction: ChatInputCommandInteraction) {
+		await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
 		const quantidade = interaction.options.getInteger("quantidade", true);
 
 		const result = await ClearService.execute(quantidade, interaction);
