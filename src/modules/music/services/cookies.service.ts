@@ -8,7 +8,7 @@ export class CookieService {
 	private static lastRefresh = 0;
 
 	private static readonly COOKIE_PATH = path.resolve(process.cwd(), "cookies.txt");
-	private static readonly PROFILE_PATH = path.resolve(process.cwd(), "youtube-profile");
+	private static readonly PROFILE_PATH = path.resolve(process.cwd(), "youtube-profile/.config/chromium");
 
 	static async refreshYoutubeCookiesIfNeeded(force = false): Promise<void> {
 		const now = Date.now();
