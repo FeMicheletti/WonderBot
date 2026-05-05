@@ -19,4 +19,5 @@ export interface GuildMusicSession {
     isPaused: boolean;
     idleTimeout?: NodeJS.Timeout;
     pauseTimeout?: NodeJS.Timeout;
+    loopCurrent: boolean;
 }

@@ -125,4 +125,8 @@ export class MusicService {
 	static async remove(guildId: string, position: number): Promise<InteractionReplyOptions> {
 		return { content: this.manager.remove(guildId, position) };
 	}
+
+	static async loop(guildId: string): Promise<InteractionReplyOptions> {
+		return { content: this.manager.toggleLoop(guildId) };
+	}
 }

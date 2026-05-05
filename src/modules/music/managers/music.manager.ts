@@ -43,10 +43,18 @@ export class MusicManager {
 			queue: [],
 			isPlaying: false,
 			isPaused: false,
+			loopCurrent: false,
 		};
 
 		player.on(AudioPlayerStatus.Idle, async () => {
 			session.isPlaying = false;
+			session.isPaused = false;
+
+			if (session.loopCurrent && session.queue[session.currentTrack]) {
+				await this.playCurrent(guild.id);
+				return;
+			}
+
 			session.currentTrack++;
 
 			if (session.currentTrack >= session.queue.length) {
@@ -189,6 +197,8 @@ export class MusicManager {
 		if (!session || session.queue.length === 0) return "📭 A fila está vazia.";
 
 		const current = session.queue[session.currentTrack];
+
+		session.loopCurrent = false;
 		session.player.stop(true);
 
 		return `⏭️ Pulando: **${current.title}**`;
@@ -279,6 +289,7 @@ export class MusicManager {
 		session.queue = [];
 		session.isPlaying = false;
 		session.isPaused = false;
+		session.loopCurrent = false;
 
 		try {
 			session.player.stop();
@@ -314,6 +325,18 @@ export class MusicManager {
 		const removedTrack = session.queue.splice(queueIndex, 1)[0];
 
 		return `🗑️ Removido da fila: **${removedTrack.title}**`;
+	}
+
+	toggleLoop(guildId: string): string {
+		const session = this.sessions.get(guildId);
+
+		if (!session || session.queue.length === 0) return "📭 Não há música tocando no momento.";
+
+		session.loopCurrent = !session.loopCurrent;
+
+		const currentTrack = session.queue[session.currentTrack];
+
+		return session.loopCurrent ? `🔁 Loop ativado para: **${currentTrack?.title ?? "música atual"}**` : "➡️ Loop desativado.";
 	}
 
 	private scheduleIdleDestroy(guildId: string): void {
