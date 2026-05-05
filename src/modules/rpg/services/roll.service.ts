@@ -31,7 +31,7 @@ export class RollService {
 			details,
 			message:
 				`🎲 **${input.username} rolou:** \`${expression}\`\n` +
-				`${details.join("\n")}\n` +
+				`${details.join(" ")}\n` +
 				`Total: **${total}**`,
 		};
 	}
