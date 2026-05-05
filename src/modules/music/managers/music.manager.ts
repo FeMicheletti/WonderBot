@@ -394,4 +394,27 @@ export class MusicManager {
 			session.pauseTimeout = undefined;
 		}
 	}
+
+	getHealthStatus() {
+		const sessions = Array.from(this.sessions.values());
+
+		return {
+			activeSessions: sessions.length,
+			playingSessions: sessions.filter((session) => session.isPlaying).length,
+			pausedSessions: sessions.filter((session) => session.isPaused).length,
+			totalQueuedTracks: sessions.reduce((total, session) => {
+				return total + Math.max(session.queue.length - session.currentTrack - 1, 0);
+			}, 0),
+			sessions: sessions.map((session) => ({
+				guildId: session.guildId,
+				channelId: session.channelId,
+				isPlaying: session.isPlaying,
+				isPaused: session.isPaused,
+				currentTrack: session.queue[session.currentTrack]?.title ?? null,
+				queueLength: session.queue.length,
+				upcomingLength: Math.max(session.queue.length - session.currentTrack - 1, 0),
+				loopCurrent: session.loopCurrent ?? false,
+			})),
+		};
+	}
 }

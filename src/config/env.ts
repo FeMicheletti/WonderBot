@@ -11,7 +11,8 @@ dotenv.config();
 const env = {
     discordToken: required('DISCORD_TOKEN'),
     clientId: required('CLIENT_ID'),
-    guildId: required('GUILD_ID')
+    guildId: required('GUILD_ID'),
+    ownerId: required("OWNER_ID"),
 };
 
 export default env;

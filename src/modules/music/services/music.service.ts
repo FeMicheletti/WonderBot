@@ -129,4 +129,8 @@ export class MusicService {
 	static async loop(guildId: string): Promise<InteractionReplyOptions> {
 		return { content: this.manager.toggleLoop(guildId) };
 	}
+
+	static getHealthStatus() {
+		return this.manager.getHealthStatus();
+	}
 }
