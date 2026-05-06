@@ -13,6 +13,7 @@ export class InviteService {
 			PermissionFlagsBits.ManageMessages |
 			PermissionFlagsBits.Connect |
 			PermissionFlagsBits.Speak |
+			PermissionFlagsBits.UseApplicationCommands |
 			PermissionFlagsBits.UseVAD;
 
 		const inviteUrl =
