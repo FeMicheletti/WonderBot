@@ -45,8 +45,6 @@ export class TrollService {
 				[
 					`**Campeão:** ${champion.name}`,
 					`**Lane:** ${lane}`,
-					`**Estilo:** ${style.name}`,
-					`_${style.description}_`,
 				].join("\n")
 			)
 			.addFields({
@@ -66,7 +64,7 @@ export class TrollService {
         const supportItems = items.filter((item) => this.isSupportItem(item));
         const finalItems = items.filter((item) => this.isFinalCompletedItem(item));
 
-        const taggedFinalItems = finalItems.filter((item) => item.tags?.some((tag) => tags.includes(tag)) );
+        const taggedFinalItems = finalItems.filter((item) => item.tags?.some((tag) => tag.includes(tag)) );
 
         const itemPool = taggedFinalItems.length >= 6 ? taggedFinalItems : finalItems;
 
