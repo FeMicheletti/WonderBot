@@ -13,6 +13,7 @@ const env = {
     clientId: required('CLIENT_ID'),
     guildId: required('GUILD_ID'),
     ownerId: required("OWNER_ID"),
+    alertChannelId: process.env.ALERT_CHANNEL_ID || null,
 };
 
 export default env;

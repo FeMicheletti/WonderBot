@@ -4,6 +4,7 @@ import { MusicManager } from "../managers/music.manager";
 import youtubeDl from "youtube-dl-exec";
 import logger from "../../../shared/utils/logger.util";
 import { CookieService } from "./cookies.service";
+import { YoutubeCookieAlertService } from "./youtube-cookie-alert.service";
 
 export class MusicService {
 	private static manager = new MusicManager();
@@ -42,14 +43,23 @@ export class MusicService {
 
 		await CookieService.refreshYoutubeCookiesIfNeeded();
 
-		const video = await youtubeDl(normalizedUrl, {
-			dumpSingleJson: true,
-			noWarnings: true,
-			noCheckCertificates: true,
-			skipDownload: true,
-			cookies: "cookies.txt",
-			remoteComponent: "ejs:github",
-		}) as any;
+		let video: any;
+
+		try {
+			await CookieService.refreshYoutubeCookiesIfNeeded();
+			video = await youtubeDl(normalizedUrl, {
+				dumpSingleJson: true,
+				noWarnings: true,
+				noCheckCertificates: true,
+				skipDownload: true,
+				cookies: "cookies.txt",
+				remoteComponent: "ejs:github",
+			}) as any;
+		} catch (error) {
+			await YoutubeCookieAlertService.notify(interaction.client, error);
+			logger.error("Erro ao buscar dados do YouTube:", error);
+			throw error;
+		}
 
 		const track: Track = {
 			title: video.title || "Unknown Title",

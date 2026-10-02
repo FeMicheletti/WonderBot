@@ -5,6 +5,7 @@ import { CommandLoader } from "./app/commandLoader";
 import { EventLoader } from "./app/eventLoader";
 import { startPresenceRotation } from "./app/startPresence";
 import { AgendarRunnerService } from "./modules/agendar/services/agendar-runner.service";
+import { WonderWatchdog } from "./app/wonder-watchdog";
 
 async function bootstrap() {
     try {
@@ -16,6 +17,7 @@ async function bootstrap() {
         client.once("ready", () => {
             startPresenceRotation(client);
             AgendarRunnerService.start(client);
+            WonderWatchdog.start(client);
         });
 
         await client.login(env.discordToken);

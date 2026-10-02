@@ -4,7 +4,7 @@ import { chromium } from "playwright";
 import logger from "../../../shared/utils/logger.util";
 
 export class CookieService {
-	private static isRefreshing = false;
+	private static refreshPromise: Promise<void> | null = null;
 	private static lastRefresh = 0;
 
 	private static readonly COOKIE_PATH = path.resolve(process.cwd(), "cookies.txt");
@@ -14,26 +14,32 @@ export class CookieService {
 		const now = Date.now();
 		const tenMinutes = 10 * 60 * 1000;
 
-		if (!force && fs.existsSync(this.COOKIE_PATH) && now - this.lastRefresh < tenMinutes) {
+		if (!force && fs.existsSync(this.COOKIE_PATH) && now - this.lastRefresh < tenMinutes) return;
+
+		if (this.refreshPromise) {
+			logger.info("[CookieService] Refresh já está em andamento. Aguardando...");
+			await this.refreshPromise;
 			return;
 		}
 
-		if (this.isRefreshing) {
-			logger.info("[CookieService] Refresh já está em andamento.");
-			return;
-		}
+		this.refreshPromise = this.refreshYoutubeCookies();
 
-		this.isRefreshing = true;
+		try {
+			await this.refreshPromise;
+		} finally {
+			this.refreshPromise = null;
+		}
+	}
+
+	private static async refreshYoutubeCookies(): Promise<void> {
+		let context: Awaited<ReturnType<typeof chromium.launchPersistentContext>> | null = null;
 
 		try {
 			logger.info("[CookieService] Atualizando cookies do YouTube...");
 
-			const context = await chromium.launchPersistentContext(this.PROFILE_PATH, {
+			context = await chromium.launchPersistentContext(this.PROFILE_PATH, {
 				headless: true,
-				args: [
-					"--no-sandbox",
-					"--disable-dev-shm-usage",
-				],
+				args: [ "--no-sandbox", "--disable-dev-shm-usage" ]
 			});
 
 			const page = await context.newPage();
@@ -45,22 +51,16 @@ export class CookieService {
 
 			const cookies = await context.cookies();
 
-			if (!cookies.length) {
-				throw new Error("Nenhum cookie foi encontrado no perfil do Chromium.");
-			}
+			if (!cookies.length) throw new Error("Nenhum cookie foi encontrado no perfil do Chromium.");
 
 			this.writeNetscapeCookies(cookies);
-
-			await context.close();
-
 			this.lastRefresh = Date.now();
-
 			logger.info(`[CookieService] cookies.txt atualizado em ${this.COOKIE_PATH}`);
-		 } catch (error) {
+		} catch (error) {
 			logger.error("[CookieService] Erro ao atualizar cookies:", error);
 			throw error;
 		} finally {
-			this.isRefreshing = false;
+			if (context) await context.close().catch(() => null);
 		}
 	}
 
