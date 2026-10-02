@@ -4,6 +4,7 @@ import { AppClient } from "./app/client";
 import { CommandLoader } from "./app/commandLoader";
 import { EventLoader } from "./app/eventLoader";
 import { startPresenceRotation } from "./app/startPresence";
+import { AgendarRunnerService } from "./modules/agendar/services/agendar-runner.service";
 
 async function bootstrap() {
     try {
@@ -14,6 +15,7 @@ async function bootstrap() {
 
         client.once("ready", () => {
             startPresenceRotation(client);
+            AgendarRunnerService.start(client);
         });
 
         await client.login(env.discordToken);
